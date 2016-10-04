@@ -25,6 +25,7 @@ class SqlQueue(object):
         self._minCommitIntervalSeconds = minCommitIntervalSeconds
 
         self._db = sqlite3.connect(fileName)
+        print('Building database...')
         self._db.execute('create table if not exists Items('
                          'Id integer primary key, '
                          'Json text);')
@@ -57,6 +58,23 @@ class SqlQueue(object):
         self._count -= 1
 
         return jsonItem.encode('utf-8')
+
+    def purge(self, howMany='all'):
+        if self._count == 0:
+            return
+
+        c = self._db.cursor()
+
+        if howMany == 'all':
+            c.execute('delete from Items;')
+            self._count = 0
+        else:
+            c.execute('delete from Items where Id in '
+                      '(select Id from Items order by Id limit ?);',
+                      (howMany,))
+            self._count -= c.rowcount
+
+        self._commit()
 
     def _commit(self):
         # Since we assume that we have exclusive ownership of the database
@@ -220,6 +238,7 @@ class Server(asyncore.dispatcher):
         self.create_socket(domain, socket.SOCK_STREAM)
         self.bind(address)
         self.listen(connectionBacklogSize())
+        print('Ready.')
      
     def handle_accept(self):
         peer = self.accept()
@@ -229,6 +248,63 @@ class Server(asyncore.dispatcher):
         sock, address = peer
         debug('Incoming connection from', address)
         Channel(sock, self._popWaitQueue, self._jsonQueue)
+
+#######################################
+# stdin listener (for admin commands) #
+#######################################
+
+def intOrNone(string):
+    try:
+        return int(string)
+    except ValueError:
+        return None
+
+class AdminReader(asyncore.file_dispatcher):
+    def __init__(self, fileObject, jsonQueue):
+        asyncore.file_dispatcher.__init__(self, fileObject)
+        self._jsonQueue = jsonQueue
+
+    def handle_read(self):
+        data = self.socket.recv(4096).strip()
+
+        words = data.split()
+        if len(words) == 0:
+            print("I don't understand your admin command: \"{}\"".format(data),
+                  file=sys.stderr)
+            return
+
+        command, args = words[0], words[1:]
+
+        if command == 'exit':
+            raise asyncore.ExitNow()
+        elif command == 'purge':
+            self.handlePurge(command, args)
+        elif command == 'echo':
+            print(data[len(command):].lstrip())
+        else:
+            print("I don't understand your "
+                  'admin command: "{}"'.format(command),
+                  file=sys.stderr)
+        
+    def handlePurge(self, command, args):
+        nArgs = len(args)
+        if nArgs == 0:
+            self._jsonQueue.purge()
+        elif nArgs == 1:
+            howMany = intOrNone(args[0])
+            if howMany is None:
+                print('Invalid number of items to purge: "{}"'.format(args[1]),
+                      file=sys.stderr)
+                return
+            self._jsonQueue.purge(howMany)
+        else:
+            print('Too many arguments passed to "purge":', args,
+                  file=sys.stderr)
+
+    def handle_close(self):
+        print('Admin command pipe is closed. Exiting.', file=sys.stderr)
+        self.close()
+        raise asyncore.ExitNow()
 
 ############################################################
 # Main daemon logic (command line parsing, open port, etc. #
@@ -261,5 +337,9 @@ else:
 
 popWaitQueue = deque()
 with SqlQueue(options.database) as jsonQueue:
+    AdminReader(sys.stdin, jsonQueue)
     Server(address, popWaitQueue, jsonQueue)
-    asyncore.loop(use_poll=True)
+    try:
+        asyncore.loop(use_poll=True)
+    except asyncore.ExitNow:
+        pass
