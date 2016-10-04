@@ -151,7 +151,6 @@ class Channel(asynchat.async_chat):
         self._buffer = []
         self._popWaitQueue = popWaitQueue
         self._jsonQueue = jsonQueue
-        self._waitingCount = 0 # How many times 'self' appears in popWaitQueue.
 
     def collect_incoming_data(self, data):
         debug(self, 'has data', data)
@@ -183,7 +182,6 @@ class Channel(asynchat.async_chat):
             if len(self._jsonQueue) == 0:
                 debug('Putting', self, 'onto the wait queue.')
                 self._popWaitQueue.appendleft(self)
-                self._waitingCount += 1
             else:
                 self.push(self._jsonQueue.pop() + '\n')
         elif command == 'count':
@@ -198,8 +196,6 @@ class Channel(asynchat.async_chat):
 
     def popReady(self, jsonItem):
         debug(self, 'got something after waiting:', jsonItem)
-        assert self._waitingCount > 0
-        self._waitingCount -= 1
         self.push(jsonItem + '\n')
 
     def reportError(self, message):
