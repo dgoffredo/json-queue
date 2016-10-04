@@ -1,10 +1,27 @@
 
 from socket import *
 import json
+import argparse
+
+def getOptions():
+    parser = argparse.ArgumentParser(description='JSON queue server')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--port', type=int,
+                       help='port to listen on')
+    group.add_argument('--socket',
+                       help='path to unix domain socket') 
+    return parser.parse_args()
+
+options = getOptions()
 
 def sock():
-    s = socket(AF_INET, SOCK_STREAM)
-    s.connect((gethostname(), 1337))
+    if options.socket is not None:
+        s = socket(AF_UNIX, SOCK_STREAM)
+        s.connect(options.socket)
+    else:
+        assert options.port is not None
+        s = socket(AF_INET, SOCK_STREAM)
+        s.connect((gethostname(), options.port))
     return s
 
 s = sock()

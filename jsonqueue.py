@@ -234,14 +234,14 @@ class Server(asyncore.dispatcher):
 # Main daemon logic (command line parsing, open port, etc. #
 ############################################################
 
-# debug = print # for debugging
+# debug = print # for dev
 
 # For production, 'debug' is a no-op.
 def debug(*args, **kwargs):
     pass
 
 def getOptions():
-    parser = argparse.ArgumentParser(description='JSON queue server.')
+    parser = argparse.ArgumentParser(description='JSON queue server')
     parser.add_argument('database', nargs='?',
                         help='path to database file')
     group = parser.add_mutually_exclusive_group(required=True)
@@ -253,7 +253,11 @@ def getOptions():
 
 options = getOptions()
 
-address = options.port if options.port is not None else options.socket
+if options.port is not None:
+    address = options.port
+else:
+    assert options.socket is not None
+    address = options.socket
 
 popWaitQueue = deque()
 with SqlQueue(options.database) as jsonQueue:
