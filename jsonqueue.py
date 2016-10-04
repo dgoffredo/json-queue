@@ -10,21 +10,25 @@ import re
 import sqlite3
 import time
 import sys
+import argparse
 
 ##################################
 # SQL stuff for the queue server #
 ##################################
 
 class SqlQueue(object):
-    def __init__(self, fileName=':memory:', minCommitIntervalSeconds=10):
-        self._lastCommitTime = 0 # Suitably past initial value.
+    def __init__(self, fileName=None, minCommitIntervalSeconds=10):
+        if fileName is None:
+            fileName = ':memory:'
+
+        self._lastCommitTime = 0 # A long time ago.
         self._minCommitIntervalSeconds = minCommitIntervalSeconds
 
         self._db = sqlite3.connect(fileName)
         self._db.execute('create table if not exists Items('
                          'Id integer primary key, '
                          'Json text);')
-        self._db_execute('vacuum;')
+        self._db.execute('vacuum;') # Rebuild the database; like defragmenting.
         self._commit()
 
         self._count = next(self._db.execute('select count(*) from Items;'))[0]
@@ -159,7 +163,7 @@ class Channel(asynchat.async_chat):
                 self.push('ok\n')
         elif command == 'pop':
             if len(self._jsonQueue) == 0:
-                debug('Putting', self, 'on the wait queue.')
+                debug('Putting', self, 'onto the wait queue.')
                 self._popWaitQueue.appendleft(self)
                 self._waitingCount += 1
             else:
@@ -222,25 +226,36 @@ class Server(asyncore.dispatcher):
         if peer is None:
             return # Connection didn't take place: ignore event.
         
-        # If we're listening on an AF_INET socket, then address with be the
-        # ip of the peer. If we're listening on an AF_UNIX socket, then it
-        # will be None.
         sock, address = peer
         debug('Incoming connection from', address)
         Channel(sock, self._popWaitQueue, self._jsonQueue)
 
 ############################################################
-# Main server logic (command line parsing, open port, etc. #
+# Main daemon logic (command line parsing, open port, etc. #
 ############################################################
 
 # debug = print # for debugging
 
+# For production, 'debug' is a no-op.
 def debug(*args, **kwargs):
-    pass # for production
+    pass
 
-Queue = SqlQueue
+def getOptions():
+    parser = argparse.ArgumentParser(description='JSON queue server.')
+    parser.add_argument('database', nargs='?',
+                        help='path to database file')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--port', type=int,
+                       help='port to listen on')
+    group.add_argument('--socket',
+                       help='path to unix domain socket') 
+    return parser.parse_args()
+
+options = getOptions()
+
+address = options.port if options.port is not None else options.socket
 
 popWaitQueue = deque()
-with Queue(sys.argv[1]) as jsonQueue:
-    Server(1337, popWaitQueue, jsonQueue)
+with SqlQueue(options.database) as jsonQueue:
+    Server(address, popWaitQueue, jsonQueue)
     asyncore.loop(use_poll=True)
