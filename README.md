@@ -9,7 +9,7 @@ A dead simple queue server for JSON data
     Building database...
     Ready.
 
-    $ > admin-pipe echo "echo jsonqueue responding to an admin command"
+    $ >admin-pipe echo "echo jsonqueue responding to an admin command"
     jsonqueue responding to an admin command
 
     $ ./testclient.py --port 1337
@@ -22,7 +22,7 @@ A dead simple queue server for JSON data
     '{"and":[2,"stuffs"],"some":"data"}\n'
     >>> quit()
 
-    $ echo exit > admin-pipe
+    $ >admin-pipe echo exit 
     Exiting.
 
     $
