@@ -72,13 +72,13 @@ the server's stderr.
 | Command                              | Effect
 | -------                              | ------
 | `echo <text to print> \n`            | Print the specified text to stderr.
-|                                      |
+| ------                               | ------
 | `purge <number of rows to purge> \n` | Pop up to the specified number of \
 items from the queue and discard them. Print to stderr the number discarded.
-|                                      |
+| ------                               | ------
 | `purge`                              | Pop all of the queue's items and \
 discard them. Print to stderr the number discarded.
-|                                      |
+| ------                               | ------
 | `exit`                               | Shut down the server and exit the \
 process
 
