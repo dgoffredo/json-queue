@@ -47,7 +47,7 @@ A dead simple queue server for JSON data
 ## client protocol
 
 It's a line based protocol. The table below is from a client's point of view.
-Any whitespace immediatly preceeding the newline character may be omitted.
+Any whitespace immediately preceeding the newline character may be omitted.
 
 | Operation       | Direction | Format                  |
 | ---------       | --------- | ------                  |
