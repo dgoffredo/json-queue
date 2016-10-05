@@ -67,14 +67,17 @@ class SqlQueue(object):
 
         if howMany == 'all':
             c.execute('delete from Items;')
+            numRemoved = self._count
             self._count = 0
         else:
             c.execute('delete from Items where Id in '
                       '(select Id from Items order by Id limit ?);',
                       (howMany,))
-            self._count -= c.rowcount
+            numRemoved = c.rowcount
+            self._count -= numRemoved
 
         self._commit()
+        return numRemoved
 
     def _commit(self):
         # Since we assume that we have exclusive ownership of the database
@@ -272,6 +275,7 @@ class AdminReader(asyncore.file_dispatcher):
         command, args = words[0], words[1:]
 
         if command == 'exit':
+            print('Exiting.', file=sys.stderr)
             raise asyncore.ExitNow()
         elif command == 'purge':
             self.handlePurge(command, args)
@@ -284,18 +288,23 @@ class AdminReader(asyncore.file_dispatcher):
         
     def handlePurge(self, command, args):
         nArgs = len(args)
+        if nArgs > 1:
+            print('Too many arguments passed to "purge":', args,
+                  file=sys.stderr)
+            return
+
         if nArgs == 0:
-            self._jsonQueue.purge()
+            howMany = self._jsonQueue.purge()
         elif nArgs == 1:
             howMany = intOrNone(args[0])
             if howMany is None:
                 print('Invalid number of items to purge: "{}"'.format(args[1]),
                       file=sys.stderr)
                 return
-            self._jsonQueue.purge(howMany)
-        else:
-            print('Too many arguments passed to "purge":', args,
-                  file=sys.stderr)
+            howMany = self._jsonQueue.purge(howMany)
+
+        print('Purged (popped) {} items from the queue.'.format(howMany),
+              file=sys.stderr)
 
     def handle_close(self):
         print('Admin command pipe is closed. Exiting.', file=sys.stderr)
