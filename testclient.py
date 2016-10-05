@@ -6,10 +6,12 @@ import argparse
 import code
 
 def getOptions():
-    parser = argparse.ArgumentParser(description='JSON queue server')
+    parser = argparse.ArgumentParser(description='JSON queue test client')
+    parser.add_argument('--host', default=gethostname(),
+                        help='host to connect to (unless --socket specified)')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--port', type=int,
-                       help='port to listen on')
+                       help='port to connect to')
     group.add_argument('--socket',
                        help='path to unix domain socket') 
     return parser.parse_args()
@@ -23,7 +25,7 @@ def sock():
     else:
         assert options.port is not None
         s = socket(AF_INET, SOCK_STREAM)
-        s.connect((gethostname(), options.port))
+        s.connect((options.host, options.port))
     return s
 
 s = sock()

@@ -325,7 +325,7 @@ def debug(*args, **kwargs):
 def getOptions():
     parser = argparse.ArgumentParser(description='JSON queue server')
     parser.add_argument('database', nargs='?',
-                        help='path to database file')
+                        help='path to database file (":memory:" if not specified)')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--port', type=int,
                        help='port to listen on')

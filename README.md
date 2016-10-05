@@ -4,11 +4,14 @@ A dead simple queue server for JSON data
 ## example
 
     $ mkfifo admin-pipe
+
     $ ./piper.py admin-pipe | ./jsonqueue.py --port 1337 &
     Building database...
     Ready.
+
     $ > admin-pipe echo "echo jsonqueue responding to an admin command"
     jsonqueue responding to an admin command
+
     $ ./testclient.py --port 1337
     ctrl+d or quit() to quit.
     >>> count()
@@ -18,7 +21,11 @@ A dead simple queue server for JSON data
     >>> pop()
     '{"and":[2,"stuffs"],"some":"data"}\n'
     >>> quit()
+
     $ echo exit > admin-pipe
+    Exiting.
+
+    $
 
 ## --help
 
