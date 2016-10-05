@@ -43,3 +43,42 @@ A dead simple queue server for JSON data
       -h, --help       show this help message and exit
       --port PORT      port to listen on
       --socket SOCKET  path to unix domain socket
+
+## client protocol
+
+It's a line based protocol. The table below is from a client's point of view.
+Any whitespace immediatly preceeding the newline character may be omitted.
+
+| Operation       | Direction | Format                       |
+| ---------       | --------- | ------                       |
+| push            | write     | `push <JSON text> \n`        |
+|                 | read      | `ok \n`                      |
+|                 |           |                              |
+| push _ no _ ack | write     | `push_no_ack <JSON text> \n` |
+|                 |           |                              |
+| pop             | write     | `pop \n`                     |
+|                 | read      | `<JSON text>`                |
+|                 |           |                              |
+| count           | write     | `count \n`                   |
+|                 | read      | `<integer> \n`               |
+
+
+## admin commands
+
+Administrative commands are issued to the JSON queue server by writing lines
+to its stdin. It's a line based protocol. Output diagnostics are printed to
+the server's stderr.
+
+| Command                              | Effect
+| -------                              | ------
+| `echo <text to print> \n`            | Print the specified text to stderr.
+|                                      |
+| `purge <number of rows to purge> \n` | Pop up to the specified number of \
+items from the queue and discard them. Print to stderr the number discarded.
+|                                      |
+| `purge`                              | Pop all of the queue's items and \
+discard them. Print to stderr the number discarded.
+|                                      |
+| `exit`                               | Shut down the server and exit the \
+process
+
