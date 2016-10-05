@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 # The idea behind this script is that you want to forward lines from a pipe
 # without also forwarding EOF whenever a writer closes the write end of the

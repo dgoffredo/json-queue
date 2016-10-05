@@ -1,7 +1,9 @@
+#!/usr/bin/env python
 
 from socket import *
 import json
 import argparse
+import code
 
 def getOptions():
     parser = argparse.ArgumentParser(description='JSON queue server')
@@ -51,3 +53,5 @@ def push_spam(howMany):
 def pop_spam(howMany):
     for i in range(howMany):
         print(pop())
+
+code.interact(banner='ctrl+d or quit() to quit.', local=locals())
