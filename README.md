@@ -1,5 +1,5 @@
 # json-queue
-A dead simple queue server for JSON data
+A dead simple message queue server for JSON data
 
 ![a Jason queue](banner.jpg)
 
