@@ -1,6 +1,8 @@
 # json-queue
 A dead simple queue server for JSON data
 
+![a Jason queue](banner.jpg)
+
 ## example
 
     $ mkfifo admin-pipe
