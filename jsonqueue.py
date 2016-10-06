@@ -61,8 +61,9 @@ class SqlQueue(object):
         return jsonItem.encode('utf-8')
 
     def purge(self, howMany='all'):
+        numRemoved = 0
         if self._count == 0:
-            return
+            return numRemoved
 
         c = self._db.cursor()
 
