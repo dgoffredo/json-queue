@@ -14,6 +14,9 @@ import sys
 import argparse
 import os
 
+# Generally useful even apart from argparse.
+Namespace = argparse.Namespace
+
 ##################################
 # SQL stuff for the queue server #
 ##################################
@@ -351,11 +354,7 @@ class AdminReader(asyncore.file_dispatcher):
 def noOp(*args, **kwargs):
     pass
 
-class LogNamespace(object):
-    def __init__(self):
-        self.debug = noOp
-
-Log = LogNamespace()
+Log = argparse.Namespace(debug=noOp)
 
 def getOptions():
     parser = argparse.ArgumentParser(description='JSON queue server')

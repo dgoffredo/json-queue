@@ -62,4 +62,17 @@ def pop_spam(howMany):
     for i in range(howMany):
         print(pop())
 
+def consume(quiet=False):
+    count = 0
+    try:
+        while True:
+            if quiet:
+                pop()
+            else:
+                print(pop())
+            count += 1
+    except:
+        print('Consumed', count, 'items.')
+        raise
+
 code.interact(banner='ctrl+d or quit() to quit.', local=locals())
