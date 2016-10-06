@@ -25,9 +25,8 @@ def getOptions():
 options = getOptions()
 
 def setNonblocking(f):
-    fd = f.fileno()
-    flag = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
+    flag = fcntl.fcntl(f, fcntl.F_GETFL)
+    fcntl.fcntl(f, fcntl.F_SETFL, flag | os.O_NONBLOCK)
 
 setNonblocking(sys.stdout)
 
