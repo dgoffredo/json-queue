@@ -345,7 +345,7 @@ def getOptions():
 
 options = getOptions()
 
-# Based on the provided commands line arguments, the server's "address"
+# Based on the provided command line arguments, the server's "address"
 # will be either a unix domain socket file name or a port.
 if options.port is not None:
     address = options.port
