@@ -107,10 +107,10 @@ class SqlQueue(object):
 
 MESSAGE_TERMINATOR = '\n'
 
-def nonifyAll(value, q):
-    for i, item in enumerate(q):
+def setNone(value, queue):
+    for i, item in enumerate(queue):
         if item == value:
-            q[i] = None
+            queue[i] = None
 
 def compactJson(obj):
     return json.dumps(obj, separators=(',',':')).encode('utf-8')
@@ -132,6 +132,9 @@ def parseMessage(message):
 
     groups = match.groupdict()
     command, payload = groups['command'].lower(), groups['payload']
+    
+    # Some commands (e.g. "pop") don't have payloads.
+    # Validate that the payload is json, if there is a payload.
     if payload is not None:
         payload = formatJson(payload)
 
@@ -140,11 +143,14 @@ def parseMessage(message):
 
 # Return the first non-None value popped from 'q',
 # or None if there is no such element.
+# This allows us to set "deleted" items in the queue
+# to 'None', and it's as if those elements are no
+# longer in the queue, so long as we use this function
+# instead of plain pop().
 def popSkipNones(q):
     item = None
     while len(q) != 0 and item is None:
         item = q.pop()
-
     return item
 
 # One conversation with a client.
@@ -172,7 +178,7 @@ class Channel(asynchat.async_chat):
             self.reportError(e.message)            
             raise
 
-    # 'jsonItem' might be None, if this is a "pop."
+    # 'jsonItem' might be None, e.g. if this is a "pop."
     def handleCommand(self, command, jsonItem):
         if command in ('push', 'push_no_ack'):
             # If there's someone waiting to pop an item, give it to them.
@@ -196,9 +202,12 @@ class Channel(asynchat.async_chat):
 
     def handle_close(self):
         debug(self, 'going away.')
-        nonifyAll(self, self._popWaitQueue)
+        setNone(self, self._popWaitQueue)
         self.close() # Do this to prevent infinite loop.
 
+    # Called (likely by another object) when 'self' is popped off of
+    # the 'popWaitQueue' and given a newly pushed item. 'self' had been
+    # previously waiting to pop an item, but the json queue was empty.
     def popReady(self, jsonItem):
         debug(self, 'got something after waiting:', jsonItem)
         self.push(jsonItem + '\n')
@@ -336,6 +345,8 @@ def getOptions():
 
 options = getOptions()
 
+# Based on the provided commands line arguments, the server's "address"
+# will be either a unix domain socket file name or a port.
 if options.port is not None:
     address = options.port
 else:
