@@ -322,9 +322,9 @@ class AdminReader(asyncore.file_dispatcher):
         self.close()
         raise asyncore.ExitNow()
 
-############################################################
-# Main daemon logic (command line parsing, open port, etc. #
-############################################################
+#############################################################
+# Main daemon logic (command line parsing, open port, etc.) #
+#############################################################
 
 # debug = print # for dev
 
