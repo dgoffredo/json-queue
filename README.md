@@ -53,7 +53,7 @@ Any whitespace immediately preceeding the newline character may be omitted.
 | ---------       | --------- | ------                  |
 | push            | write     | `push <JSON> \n`        |
 |                 | read      | `ok \n`                 |
-| push_no_ack | write     | `push_no_ack <JSON> \n` |
+| push_no_ack     | write     | `push_no_ack <JSON> \n` |
 | pop             | write     | `pop \n`                |
 |                 | read      | `<JSON text>`           |
 | count           | write     | `count \n`              |
@@ -71,5 +71,7 @@ the server's stderr.
 | `echo <text> \n`            | Print the specified text to stderr.
 | `purge <integer> \n` | Pop up to the specified number of items from the queue and discard them. Print to stderr the number discarded. |
 | `purge`                              | Pop all of the queue's items and discard them. Print to stderr the number discarded. |
+| `count \n` | Print to stderr the number of items currently in the queue |
+| `debug <setting> \n` | Enable/disable debugging trace. The setting may be one of `on`, `yes`, or `enable` to enable; or, one of `off`, `no`, or `disable` to disable. |
 | `exit`                               | Shut down the server and exit the process |
 

@@ -12,6 +12,7 @@ import sqlite3
 import time
 import sys
 import argparse
+import os
 
 ##################################
 # SQL stuff for the queue server #
@@ -138,7 +139,7 @@ def parseMessage(message):
     if payload is not None:
         payload = formatJson(payload)
 
-    debug(command, payload)
+    Log.debug(command, payload)
     return command, payload
 
 # Return the first non-None value popped from 'q',
@@ -164,12 +165,12 @@ class Channel(asynchat.async_chat):
         self._jsonQueue = jsonQueue
 
     def collect_incoming_data(self, data):
-        debug(self, 'has data', data)
+        Log.debug(self, 'has data', data)
         self._buffer.append(data)
 
     def found_terminator(self):
         message = ''.join(self._buffer)
-        debug(self, 'encountered a statement:', message)
+        Log.debug(self, 'encountered a statement:', message)
         del self._buffer[:]
 
         try:
@@ -191,7 +192,7 @@ class Channel(asynchat.async_chat):
                 self.push('ok\n')
         elif command == 'pop':
             if len(self._jsonQueue) == 0:
-                debug('Putting', self, 'onto the wait queue.')
+                Log.debug('Putting', self, 'onto the wait queue.')
                 self._popWaitQueue.appendleft(self)
             else:
                 self.push(self._jsonQueue.pop() + '\n')
@@ -201,7 +202,7 @@ class Channel(asynchat.async_chat):
             self.reportError('Unknown command "{}"'.format(command))
 
     def handle_close(self):
-        debug(self, 'going away.')
+        Log.debug(self, 'going away.')
         setNone(self, self._popWaitQueue)
         self.close() # Do this to prevent infinite loop.
 
@@ -209,11 +210,13 @@ class Channel(asynchat.async_chat):
     # the 'popWaitQueue' and given a newly pushed item. 'self' had been
     # previously waiting to pop an item, but the json queue was empty.
     def popReady(self, jsonItem):
-        debug(self, 'got something after waiting:', jsonItem)
+        Log.debug(self, 'got something after waiting:', jsonItem)
         self.push(jsonItem + '\n')
 
     def reportError(self, message):
-        self.push('error {}\n'.format(json.dumps(message)))
+        report = 'error {}\n'.format(json.dumps(message))
+        Log.debug(report)
+        self.push(report)
 
 def connectionBacklogSize():      
     # There is some discussion online about the correct 'backlog'
@@ -256,7 +259,7 @@ class Server(asyncore.dispatcher):
             return # Connection didn't take place: ignore event.
         
         sock, address = peer
-        debug('Incoming connection from', address)
+        Log.debug('Incoming connection from "{}"'.format(address))
         Channel(sock, self._popWaitQueue, self._jsonQueue)
 
 #######################################
@@ -279,8 +282,7 @@ class AdminReader(asyncore.file_dispatcher):
 
         words = data.split()
         if len(words) == 0:
-            print("I don't understand your admin command: \"{}\"".format(data),
-                  file=sys.stderr)
+            # Ignore empty (whitespace-only) commands.
             return
 
         command, args = words[0], words[1:]
@@ -292,6 +294,10 @@ class AdminReader(asyncore.file_dispatcher):
             self.handlePurge(command, args)
         elif command == 'echo':
             print(data[len(command):].lstrip())
+        elif command == 'count':
+            print(len(self._jsonQueue), file=sys.stderr)
+        elif command == 'debug':
+            self.handleDebug(command, args)
         else:
             print("I don't understand your "
                   'admin command: "{}"'.format(command),
@@ -317,6 +323,22 @@ class AdminReader(asyncore.file_dispatcher):
         print('Purged (popped) {} items from the queue.'.format(howMany),
               file=sys.stderr)
 
+    def handleDebug(self, command, args):
+        if len(args) == 0 or args[0].lower() in ('on', 'yes', 'enable'):
+            if Log.debug == print:
+                print('Debug trace is already enabled.'
+                      ' Use "debug off" to disable.', file=sys.stderr)
+            else:
+                Log.debug = print
+                print('Debug trace is now enabled.', file=sys.stderr)
+        elif args[0].lower() in ('off', 'no', 'disable'):
+            Log.debug = noOp
+            print('Debug trace is now disabled.', file=sys.stderr)
+        else:
+            whitelist = ['on', 'yes', 'enable', 'off', 'no', 'disable']
+            print('Invalid arguments to "{}": {}. Specify one of {}.',
+                  command, args, whitelist, file=sys.stderr)
+
     def handle_close(self):
         print('Admin command pipe is closed. Exiting.', file=sys.stderr)
         self.close()
@@ -326,16 +348,21 @@ class AdminReader(asyncore.file_dispatcher):
 # Main daemon logic (command line parsing, open port, etc.) #
 #############################################################
 
-# debug = print # for dev
-
-# For production, 'debug' is a no-op.
-def debug(*args, **kwargs):
+def noOp(*args, **kwargs):
     pass
+
+class LogNamespace(object):
+    def __init__(self):
+        self.debug = noOp
+
+Log = LogNamespace()
 
 def getOptions():
     parser = argparse.ArgumentParser(description='JSON queue server')
     parser.add_argument('database', nargs='?',
                         help='path to database file (":memory:" if not specified)')
+    parser.add_argument('--debug', action='store_true',
+                        help='enable debugging trace')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--port', type=int,
                        help='port to listen on')
@@ -344,6 +371,9 @@ def getOptions():
     return parser.parse_args()
 
 options = getOptions()
+
+if options.debug:
+    Log.debug = print
 
 # Based on the provided command line arguments, the server's "address"
 # will be either a unix domain socket file name or a port.
@@ -361,3 +391,8 @@ with SqlQueue(options.database) as jsonQueue:
         asyncore.loop(use_poll=True)
     except asyncore.ExitNow:
         pass
+    finally:
+        # If we used a unix domain socket, delete it. Nobody will be
+        # able to use it anymore anyway.
+        if isinstance(address, basestring):
+            os.remove(address)

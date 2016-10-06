@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 from socket import *
 import json
 import argparse
@@ -51,6 +53,10 @@ def count():
 def push_spam(howMany):
     for i in range(howMany):
         print(push(['spam', i]))
+
+def push_no_ack_spam(howMany):
+    for i in range(howMany):
+        push_no_ack(['spam', i])
 
 def pop_spam(howMany):
     for i in range(howMany):
