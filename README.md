@@ -55,7 +55,7 @@ Any whitespace immediately preceeding the newline character may be omitted.
 |                 | read      | `ok \n`                 |
 | push_no_ack     | write     | `push_no_ack <JSON> \n` |
 | pop             | write     | `pop \n`                |
-|                 | read      | `<JSON text>`           |
+|                 | read      | `<JSON text> \n`        |
 | count           | write     | `count \n`              |
 |                 | read      | `<integer> \n`          |
 
