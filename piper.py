@@ -15,7 +15,7 @@ import argparse
 import select
 import fcntl
 import os
-import multiprocessing
+from multiprocessing import Process
 
 def getOptions():
     parser = argparse.ArgumentParser(description='Monitor fifo for lines')
@@ -39,7 +39,7 @@ def openNonblocking(filePath):
 # the same pipe for reading, without being blocked on open(). Then we join()
 # with the subprocess and continue.
 #
-process = multiprocessing.Process(target=lambda: open(options.pipePath, 'w').close())
+process = Process(target=lambda: open(options.pipePath, 'w').close())
 process.start()
 
 inPipe = openNonblocking(options.pipePath)
